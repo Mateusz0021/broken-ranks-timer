@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Broken Ranks Champion Timer</title>
+    <style>
+        /* Style CSS (tutaj lub w osobnym pliku CSS) */
+        .timer-item {
+            margin-bottom: 5px;
+            padding: 5px;
+            border: 1px solid #ccc;
+        }
+        .yellow { background-color: yellow; }
+        .green { background-color: green; }
+        .red { background-color: red; }
+    </style>
+</head>
+<body>
+    <h1>Broken Ranks Champion Timer</h1>
+
+    <label for="champion">Wybierz Championa:</label>
+    <select id="champion">
+    </select><br><br>
+
+    <label for="customTime">Użyj własnej godziny (HH:MM):</label>
+    <input type="checkbox" id="useCustomTime">
+    <input type="text" id="customTime" placeholder="HH:MM" disabled><br><br>
+
+    <button id="addButton">Dodaj</button><br><br>
+
+    <h2>Lista Championów:</h2>
+    <div id="timerList"></div>
+
+    <button id="resetButton">Reset Listy</button>
+
+    <audio id="respawnSound" src="ding-126626.mp3.mp3" preload="auto"></audio>
+
+    <script>
+        const CHAMPION_RESPAWN_TIMES = {
+            "[BOSS] Bibliotekarz": {"respawn": 17, "additional": 12, "location": "Zamek Gastlehof"},
+            "[BOSS] Wendigo": {"respawn": 120, "additional": 30, "location": "Płaskowyż Dmorther, Wąwóz Dmorther"},
+            "[BOSS] Jastrzębior": {"respawn": 300, "additional": 120, "location": "Beirn, Półka Skalna"},
+            "Kosior": {"respawn": 25, "additional": 5, "location": "Jaskinia Południowa"},
+            "Kruczy": {"respawn": 25, "additional": 5, "location": "Jaskinia Południowa"},
+            "Ogruch": {"respawn": 20, "additional": 10, "location": "Podzamcze"},
+            "Treven": {"respawn": 60, "additional": 20, "location": "Wymarła osada"},
+            "Cybulski": {"respawn": 35, "additional": 15, "location": "Wymarła osada"},
+            "Nielichy": {"respawn": 20, "additional": 8, "location": "Wymarła osada"},
+            "Popiel": {"respawn": 30, "additional": 10, "location": "Podzamcze, Zamek Gastelhof"},
+            "Acerodon": {"respawn": 60, "additional": 10, "location": "Jaskinie pod Mokradłami, Jaskinie pod Wieżami, Zapomniany Korytarz, Jaszczurzy Cmentarz"},
+            "Harilar": {"respawn": 60, "additional": 15, "location": "Jaskinie pod Granicą, Podzamcze"},
+            "Król Szczurów": {"respawn": 90, "additional": 30, "location": "Jaskinie pod Mokradłami, Jaskinie pod Wieżami"},
+            "Orthal": {"respawn": 40, "additional": 20, "location": "Jaskinie pod Granicą, Podzamcze"},
+            "Wilhelm Tell": {"respawn": 45, "additional": 20, "location": "Podzamcze, Zamek Gastelhof"},
+            "Wilczur": {"respawn": 60, "additional": 10, "location": "Wilcza jama"},
+            "Przybysz": {"respawn": 90, "additional": 30, "location": "Wybrzeże"},
+            "Zębacz": {"respawn": 40, "additional": 8, "location": "Wybrzeże, Statek, Jaskinie pod Wieżami, Jaskinie pod Mokradłami"},
+            "Brachyura": {"respawn": 30, "additional": 15, "location": "Wybrzeże"},
+            "Tilsal Wędrowny": {"respawn": 60, "additional": 10, "location": "Wybrzeże, Statek, Jaskinie pod Wieżami, Jaskinie pod Mokradłami"},
+            "Karol Kold": {"respawn": 45, "additional": 12, "location": "Niedźwiedzia jaskinia, Las Koldów"},
+            "Psychopata": {"respawn": 50, "additional": 15, "location": "Las Koldów"},
+            "Krwiopijca": {"respawn": 90, "additional": 10, "location": "Niedźwiedzia jaskinia"},
+            "Zaklinacz Kruków": {"respawn": 25, "additional": 8, "location": "Las Koldów"},
+            "Wściekły Grizzly": {"respawn": 35, "additional": 20, "location": "Niedźwiedzia jaskinia, Las Koldów"},
+            "Telek": {"respawn": 60, "additional": 6, "location": "Las Orków"},
+            "Rizurul": {"respawn": 40, "additional": 5, "location": "Las Orków"},
+            "Żaimm": {"respawn": 20, "additional": 4, "location": "Las Orków, Namiot wodza orków"},
+            "Wściekły Burkan": {"respawn": 20, "additional": 10, "location": "Thalia Uniwersytecka"},
+            "Jesienica": {"respawn": 35, "additional": 12, "location": "Thalia Uniwersytecka"},
+            "Dritan Żarliwy": {"respawn": 90, "additional": 20, "location": "Thalia Uniwersytecka"},
+            "Zimowy Szaman": {"respawn": 60, "additional": 10, "location": "Wąwóz Dmorther, Jaskinia na Masywie, Grań, Góry Koldów"},
+            "Tygrys Górski": {"respawn": 25, "additional": 15, "location": "Wąwóz Dmorther, Jaskinia na Masywie, Grań, Plaskowyż Dmorther"},
+            "Obłąkana Harpia": {"respawn": 35, "additional": 12, "location": "Wąwóz Dmorther, Plaskowyż Dmorther"},
+            "Zawieja": {"respawn": 45, "additional": 20, "location": "Płaskowyż Dmorther"},
+            "Ragak Maruder": {"respawn": 120, "additional": 30, "location": "Wąwóz Drmorther, Grań"},
+            "Yoko": {"respawn": 15, "additional": 4, "location": "Chram"},
+            "Kapłan Śmierci": {"respawn": 1440, "additional": 360, "location": "Wąwóz Drmorther, Góry Kołdów, Grań, Plaskowyż Drmorther"},
+            "Halmengir": {"respawn": 60, "additional": 15, "location": "Opuszczona Wieża, Jaskinia pod wodospadem, Pod mostem"},
+            "Olm": {"respawn": 120, "additional": 20, "location": "Opuszczona Wieża, Jaskinia pod wodospadem, Pod mostem"},
+            "Troll Zimowy 1": {"respawn": 30, "additional": 10, "location": "Zamarznięte Jezioro"},
+            "Troll Zimowy 2": {"respawn": 30, "additional": 10, "location": "Zamarznięte Jezioro"},
+            "Podróżnik": {"respawn": 20, "additional": 5, "location": "Zamarznięte Jezioro"},
+            "Koszmar": {"respawn": 60, "additional": 15, "location": "Zamarznięte Jezioro"},
+            "Pacynkarz": {"respawn": 30, "additional": 10, "location": "Zamarznięte Jezioro"},
+            "Wykwit": {"respawn": 25, "additional": 10, "location": "Pustkowie Hvara"},
+            "Grobnica": {"respawn": 45, "additional": 15, "location": "Pustkowie Hvara"},
+            "Krwiopij": {"respawn": 60, "additional": 40, "location": "Beirn"},
+            "Wisp": {"respawn": 120, "additional": 60, "location": "Beirn"},
+            "Żywiciel Jak": {"respawn": 60, "additional": 45, "location": "Beirn"},
+            "Żerca": {"respawn": 45, "additional": 30, "location": "Lochy"},
+            "Żywiciel Jeti": {"respawn": 60, "additional": 45, "location": "Stok"},
+            "Gnawk": {"respawn": 120, "additional": 60, "location": "Jaskinia pod wodospadem, Jaskinia Olbrzymów, Jaskinia (na północy jeziora)"},
+            "Mamut": {"respawn": 120, "additional": 60, "location": "Stok"},
+            "Astronom": {"respawn": 360, "additional": 60, "location": "Lochy"},
+            "Kowal Lugas": {"respawn": 331, "additional": 0, "location": "Lochy"},
+            "Straż Lugas": {"respawn": 331, "additional": 0, "location": "Lochy"},
+        };
+
+
+        const champions = CHAMPION_RESPAWN_TIMES;
+
+        // Dynamiczne dodawanie opcji do select
+        const championSelect = document.getElementById("champion");
+        for (const championName in champions) {
+            const option = document.createElement("option");
+            option.value = championName;
+            option.text = championName;
+            championSelect.add(option);
+        }
+
+        let timers = [];
+
+        const useCustomTimeCheckbox = document.getElementById("useCustomTime");
+        const customTimeInput = document.getElementById("customTime");
+        const addButton = document.getElementById("addButton");
+        const timerList = document.getElementById("timerList");
+        const resetButton = document.getElementById("resetButton");
+
+        // Funkcja włączająca/wyłączająca pole czasu
+        useCustomTimeCheckbox.addEventListener("change", function() {
+            customTimeInput.disabled = !this.checked;
+        });
+
+        addButton.addEventListener("click", function() {
+            const championName = championSelect.value;
+
+            if (!champions[championName]) {
+                alert("Wybierz poprawnego championa!");
+                return;
+            }
+
+            const location = champions[championName].location;
+
+            const useCustomTime = useCustomTimeCheckbox.checked;
+            const customTime = customTimeInput.value;
+
+            let killTime = new Date(); // Domyślnie aktualny czas
+            if (useCustomTime) {
+                const [hours, minutes] = customTime.split(":");
+                killTime.setHours(parseInt(hours));
+                killTime.setMinutes(parseInt(minutes));
+                killTime.setSeconds(0);
+                killTime.setMilliseconds(0);
+
+                 // Jeśli podany czas jest w przeszłości, dodaj jeden dzień
+                const now = new Date();
+                if (killTime < now) {
+                    killTime.setDate(killTime.getDate() + 1);
+                }
+            }
+
+            const respawnTimeMinutes = champions[championName].respawn;
+            const respawnRangeMinutes = champions[championName].additional;
+            const respawnTime = new Date(killTime.getTime() + respawnTimeMinutes * 60000); // w milisekundach
+            const respawnRangeEnd = new Date(respawnTime.getTime() + respawnRangeMinutes * 60000);
+
+            const newTimer = {
+                champion: championName,
+                location: location,
+                killTime: killTime,
+                respawnTime: respawnTime,
+                respawnRangeEnd: respawnRangeEnd,
+                status: "oczekujący"
+            };
+
+            // Sprawdź, czy timer dla tego championa już istnieje
+            let timerIndex = -1;
+            for (let i = 0; i < timers.length; i++) {
+                if (timers[i].champion === championName) {
+                    timerIndex = i;
+                    break;
+                }
+            }
+
+            if (timerIndex > -1) {
+                // Zastąp istniejący timer
+                timers[timerIndex] = newTimer;
+            } else {
+                // Dodaj nowy timer
+                timers.push(newTimer);
+            }
+
+            updateTimerList();
+        });
+
+        resetButton.addEventListener("click", function() {
+            timers = [];
+            updateTimerList();
+        });
+
+        function updateTimerList() {
+            timerList.innerHTML = "";
+            timers.forEach(timer => {
+                const timerDiv = document.createElement("div");
+                timerDiv.classList.add("timer-item");
+
+                let colorClass = "";
+                const now = new Date();
+
+                // Aktualizacja statusu
+                if (timer.status === "oczekujący" && now >= timer.respawnTime) {
+                    timer.status = "odliczanie";
+                    const respawnSound = document.getElementById("respawnSound"); // Pobierz element audio
+                    respawnSound.play(); // Odtwórz dźwięk
+                } else if (timer.status === "odliczanie" && now >= timer.respawnRangeEnd) {
+                    timer.status = "po_respawnie";
+                }
+
+                if (timer.status === "oczekujący") {
+                    colorClass = "yellow";
+                } else if (timer.status === "odliczanie") {
+                    colorClass = "green";
+                } else {
+                    colorClass = "red";
+                }
+                timerDiv.classList.add(colorClass);
+
+                let timeRemaining;
+                let timeRemainingText;
+
+                if (now < timer.respawnTime) {
+                    // Czas do rozpoczęcia respawnu
+                    timeRemaining = timer.respawnTime.getTime() - now.getTime();
+                    timeRemainingText = "Czas do respawnu:";
+                } else {
+                    // Czas do pojawienia się (koniec okna respawnu)
+                    timeRemaining = timer.respawnRangeEnd.getTime() - now.getTime();
+                    timeRemainingText = "Do pojawienia się:";
+                }
+
+                const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+
+                timerDiv.textContent = `${timer.champion} - ${timer.location} - Respawn: ${timer.respawnTime.toLocaleTimeString()} - ${timeRemainingText} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                timerList.appendChild(timerDiv);
+            });
+        }
+
+        // Aktualizacja timerów co sekundę
+        setInterval(updateTimerList, 1000);
+
+    </script>
+</body>
+</html>
